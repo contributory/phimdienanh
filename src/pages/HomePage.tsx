@@ -67,12 +67,20 @@ export default function HomePage() {
                 <IcHistory className="h-7 w-7 text-ember-400" />
                 Tiếp tục xem
               </h2>
-              <button
-                onClick={clear}
-                className="mb-1 inline-flex items-center gap-1.5 text-sm font-semibold text-fog-500 transition hover:text-ember-400"
-              >
-                <IcTrash className="h-4 w-4" /> Xoá lịch sử
-              </button>
+              <div className="mb-1 flex items-center gap-4">
+                <Link
+                  to="/xem-tiep"
+                  className="text-sm font-semibold text-fog-500 transition hover:text-gold-400"
+                >
+                  Xem tất cả →
+                </Link>
+                <button
+                  onClick={clear}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-fog-500 transition hover:text-ember-400"
+                >
+                  <IcTrash className="h-4 w-4" /> Xoá lịch sử
+                </button>
+              </div>
             </div>
             <div className="row-scroll -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
               {entries.map((e) => (

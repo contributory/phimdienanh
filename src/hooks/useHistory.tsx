@@ -11,7 +11,7 @@ import {
 import type { HistoryEntry } from "../lib/types";
 
 const STORAGE_KEY = "rapkk.history.v1";
-const MAX = 14;
+const MAX = 30;
 
 function read(): HistoryEntry[] {
   try {
@@ -35,6 +35,7 @@ function write(entries: HistoryEntry[]) {
 interface HistoryCtx {
   entries: HistoryEntry[];
   push: (e: Omit<HistoryEntry, "at">) => void;
+  remove: (slug: string, episodeSlug?: string) => void;
   clear: () => void;
   hasWatched: (slug: string, episodeSlug?: string) => boolean;
 }
@@ -42,9 +43,20 @@ interface HistoryCtx {
 const Ctx = createContext<HistoryCtx>({
   entries: [],
   push: () => {},
+  remove: () => {},
   clear: () => {},
   hasWatched: () => false,
 });
+
+/** Gộp lịch sử theo phim — giữ mục mới nhất cho từng bộ (đang xem dở). */
+export function latestByMovie(entries: HistoryEntry[]): HistoryEntry[] {
+  const seen = new Set<string>();
+  return entries.filter((e) => {
+    if (seen.has(e.slug)) return false;
+    seen.add(e.slug);
+    return true;
+  });
+}
 
 export function HistoryProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<HistoryEntry[]>(read);
@@ -62,6 +74,16 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const remove = useCallback((slug: string, episodeSlug?: string) => {
+    setEntries((prev) => {
+      const next = prev.filter(
+        (x) => !(x.slug === slug && (!episodeSlug || x.episodeSlug === episodeSlug)),
+      );
+      write(next);
+      return next;
+    });
+  }, []);
+
   const clear = useCallback(() => {
     setEntries([]);
     write([]);
@@ -74,8 +96,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ entries, push, clear, hasWatched }),
-    [entries, push, clear, hasWatched],
+    () => ({ entries, push, remove, clear, hasWatched }),
+    [entries, push, remove, clear, hasWatched],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

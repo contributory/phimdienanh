@@ -1,23 +1,97 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import MovieRow from "../components/MovieRow";
 import {
+  IcAlert,
   IcCalendar,
+  IcChevronL,
+  IcChevronR,
   IcClock,
+  IcExternal,
   IcFilm,
   IcGlobe,
+  IcMonitor,
   IcPlay,
+  IcSignal,
   IcTag,
   IcTv,
   IcUsers,
+  IcX,
 } from "../components/icons";
 import { ErrorState, FilmStrip, Reveal, Spinner } from "../components/ui";
 import { getGenreList, getMovieDetail } from "../lib/api";
 import { useFetch } from "../hooks/useFetch";
 import { useHistory } from "../hooks/useHistory";
 import { imgUrl, setDocTitle, stripHtml, timeAgo } from "../lib/utils";
+
+type Mode = "embed" | "hls";
+
+/* Trình phát HLS (m3u8) — nạp động hls.js để tách chunk riêng */
+function HlsPlayer({ src, onFatal }: { src: string; onFatal: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    let hls: import("hls.js").default | null = null;
+    let cancelled = false;
+    (async () => {
+      const { default: Hls } = await import("hls.js");
+      if (cancelled || !video) return;
+      if (Hls.isSupported()) {
+        hls = new Hls({ enableWorker: true });
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.ERROR, (_e, data) => {
+          if (data.fatal) onFatal();
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = src;
+      } else {
+        onFatal();
+      }
+    })().catch(() => onFatal());
+    return () => {
+      cancelled = true;
+      hls?.destroy();
+      video.removeAttribute("src");
+    };
+  }, [src, onFatal]);
+
+  return (
+    <video
+      ref={videoRef}
+      controls
+      autoPlay
+      playsInline
+      className="h-full w-full bg-black"
+    />
+  );
+}
+
+/* nhớ việc "đã tắt player" cho từng phim — tránh tự bật lại liên tục trong cùng phiên */
+function skipRead(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function skipWrite(key: string, v: string) {
+  try {
+    sessionStorage.setItem(key, v);
+  } catch {
+    /* bỏ qua */
+  }
+}
+function skipForget(key: string) {
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* bỏ qua */
+  }
+}
 
 function Meta({ icon, label, value }: { icon: React.ReactNode; label: string; value?: React.ReactNode }) {
   if (!value) return null;
@@ -35,10 +109,13 @@ function Meta({ icon, label, value }: { icon: React.ReactNode; label: string; va
 }
 
 export default function DetailPage() {
-  const { slug } = useParams<{ slug: string }>();
-  const { entries, hasWatched } = useHistory();
+  const { slug, tap } = useParams<{ slug: string; tap?: string }>();
+  const nav = useNavigate();
+  const { entries, hasWatched, push } = useHistory();
   const [serverIdx, setServerIdx] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const [mode, setMode] = useState<Mode>("embed");
+  const [hlsFailed, setHlsFailed] = useState(false);
 
   const { data, loading, error, retry } = useFetch(
     slug ? `detail:${slug}` : null,
@@ -56,16 +133,65 @@ export default function DetailPage() {
     () => getGenreList(genreSlug!, 1),
   );
 
+  /* tập đang phát khi mở /tap/:tap — tìm đúng tập, fallback về tập đầu của server */
+  const playing = !!tap;
+  const current = playing
+    ? (server?.server_data?.find((e) => e.slug === tap) ??
+      servers.flatMap((s) => s.server_data ?? []).find((e) => e.slug === tap) ??
+      server?.server_data?.[0])
+    : undefined;
+  const curIdx = episodes.findIndex((e) => e.slug === current?.slug);
+  const prevEp = curIdx > 0 ? episodes[curIdx - 1] : null;
+  const nextEp = curIdx >= 0 && curIdx < episodes.length - 1 ? episodes[curIdx + 1] : null;
+
+  /* khoá "đã tắt player" theo phim — tránh tự bật lại liên tục trong phiên */
+  const resumeSkipKey = slug ? `resume.skip.${slug}` : null;
+
   useEffect(() => setServerIdx(0), [slug]);
+
+  /* đổi nguồn phát khi đổi tập */
   useEffect(() => {
-    if (item) setDocTitle(item.name);
-  }, [item]);
+    setHlsFailed(false);
+    if (current) setMode(current.link_embed ? "embed" : "hls");
+  }, [current?.slug, current?.link_embed, current?.link_m3u8]);
+
+  /* lưu tiến độ xem + tiêu đề trang */
+  useEffect(() => {
+    if (!item) return;
+    if (current) {
+      push({
+        slug: item.slug,
+        name: item.name,
+        thumb: item.thumb_url || item.poster_url,
+        episode: current.name,
+        episodeSlug: current.slug,
+      });
+      setDocTitle(`${item.name} — ${current.name}`);
+    } else {
+      setDocTitle(item.name);
+    }
+  }, [item, current?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* tự tiếp tục: mở lại phim → phát tiếp từ tập đã xem dở (trừ khi vừa tắt player ở tập đó) */
+  useEffect(() => {
+    if (!item || tap || !resumeSkipKey) return;
+    const last = entries.find((e) => e.slug === item.slug);
+    if (last?.episodeSlug && skipRead(resumeSkipKey) !== last.episodeSlug) {
+      nav(`/phim/${item.slug}/tap/${last.episodeSlug}`, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.slug, tap, resumeSkipKey]);
+
+  /* đã xem một tập mới → xoá khoá tắt player để lần sau tự tiếp tục từ tập này */
+  useEffect(() => {
+    if (current?.slug && resumeSkipKey) skipForget(resumeSkipKey);
+  }, [current?.slug, resumeSkipKey]);
 
   if (loading && !item) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <Spinner className="h-9 w-9 text-gold-500" />
-        <p className="font-display text-2xl tracking-widest text-fog-500">ĐANG MỞ RẠP…</p>
+        <p className="font-display text-2xl tracking-widest text-fog-500">ĐANG TẢI PHIM…</p>
       </div>
     );
   }
@@ -87,8 +213,147 @@ export default function DetailPage() {
       ? `/phim/${item.slug}/tap/${firstEp.slug}`
       : null;
 
+  const useHls = mode === "hls" && !!current?.link_m3u8;
+
+  const closePlayer = () => {
+    if (current) skipWrite(`resume.skip.${item.slug}`, current.slug);
+    nav(`/phim/${item.slug}`);
+  };
+
   return (
     <div>
+      {/* ── Trình phát: player + info chung một trang (kiểu Netflix) ── */}
+      {playing && (
+        <section className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-6" aria-label="Trình phát phim">
+          <div className="overflow-hidden rounded-lg border border-ink-700 bg-black shadow-[0_30px_80px_-24px_rgba(0,0,0,0.95)]">
+            {/* thanh tiêu đề */}
+            <div className="flex items-center justify-between gap-2 border-b border-ink-700 bg-ink-900/90 px-3 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <button
+                  onClick={closePlayer}
+                  aria-label="Đóng trình phát"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-ink-700 bg-ink-950 text-fog-400 transition hover:border-ember-500/60 hover:text-ember-400"
+                >
+                  <IcX className="h-4 w-4" />
+                </button>
+                <div className="min-w-0">
+                  <p className="truncate font-display text-lg tracking-wide text-fog-100 sm:text-xl">
+                    {item.name}
+                  </p>
+                  <p className="truncate text-xs font-bold text-gold-400">
+                    {current ? `${current.name} · ${server?.server_name || "Server 1"}` : "Không tìm thấy tập này"}
+                  </p>
+                </div>
+              </div>
+              {current?.link_embed && (
+                <a
+                  href={current.link_embed}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hidden shrink-0 items-center gap-1.5 rounded-md border border-ink-600 px-3 py-1.5 text-xs font-bold text-fog-300 transition hover:border-gold-500/60 hover:text-gold-400 sm:inline-flex"
+                >
+                  <IcExternal className="h-3.5 w-3.5" /> Nguồn gốc
+                </a>
+              )}
+            </div>
+
+            {/* màn hình */}
+            <div className="relative aspect-video w-full bg-black">
+              {!current ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <IcAlert className="h-10 w-10 text-ember-400" />
+                  <p className="font-display text-2xl tracking-wide text-fog-100">TẬP NÀY CHƯA CÓ NGUỒN PHÁT</p>
+                  <p className="max-w-sm text-sm text-fog-500">
+                    Thử chọn server khác hoặc tập khác bên dưới — nguồn đôi khi chưa kịp cập nhật.
+                  </p>
+                </div>
+              ) : useHls && !hlsFailed && current.link_m3u8 ? (
+                <HlsPlayer src={current.link_m3u8} onFatal={() => setHlsFailed(true)} />
+              ) : current.link_embed ? (
+                <iframe
+                  key={current.link_embed}
+                  src={current.link_embed}
+                  title={`${item.name} — ${current.name}`}
+                  className="h-full w-full"
+                  allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+                  <IcAlert className="h-10 w-10 text-ember-400" />
+                  <p className="font-display text-2xl tracking-wide text-fog-100">THIẾU NGUỒN PHÁT</p>
+                  <p className="max-w-sm text-sm text-fog-500">Tập này không có link embed lẫn m3u8.</p>
+                </div>
+              )}
+              {useHls && hlsFailed && (
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 bg-ember-600/95 px-4 py-2.5 text-xs font-bold text-fog-100">
+                  <span>Luồng HLS lỗi (có thể do CORS) — đã chuyển về nguồn embed.</span>
+                  {current?.link_embed && (
+                    <button onClick={() => setMode("embed")} className="shrink-0 underline underline-offset-2">
+                      Chuyển ngay
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* thanh điều khiển: server · nguồn · tập trước/sau */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-ink-700 bg-ink-900/90 px-3 py-2.5">
+              <span className="mr-1 text-[11px] font-extrabold uppercase tracking-widest text-fog-500">Server</span>
+              {servers.map((s, i) => (
+                <button
+                  key={`${s.server_name}-${i}`}
+                  onClick={() => setServerIdx(i)}
+                  className={`rounded-md px-3 py-1.5 text-xs font-bold transition active:scale-95 ${
+                    i === Math.min(serverIdx, Math.max(servers.length - 1, 0))
+                      ? "bg-gold-500 text-ink-950"
+                      : "border border-ink-700 bg-ink-950 text-fog-300 hover:border-gold-500/60 hover:text-gold-400"
+                  }`}
+                >
+                  {s.server_name || `Server ${i + 1}`}
+                </button>
+              ))}
+
+              <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => setMode("embed")}
+                  disabled={!current?.link_embed}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition active:scale-95 disabled:opacity-30 ${
+                    !useHls ? "bg-ink-700 text-gold-300" : "border border-ink-700 text-fog-500 hover:text-fog-100"
+                  }`}
+                >
+                  <IcMonitor className="h-3.5 w-3.5" /> Embed
+                </button>
+                <button
+                  onClick={() => setMode("hls")}
+                  disabled={!current?.link_m3u8}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition active:scale-95 disabled:opacity-30 ${
+                    useHls ? "bg-ink-700 text-gold-300" : "border border-ink-700 text-fog-500 hover:text-fog-100"
+                  }`}
+                >
+                  <IcSignal className="h-3.5 w-3.5" /> M3U8
+                </button>
+                <button
+                  onClick={() => prevEp && nav(`/phim/${item.slug}/tap/${prevEp.slug}`)}
+                  disabled={!prevEp}
+                  className="inline-flex items-center gap-1 rounded-md border border-ink-700 px-3 py-1.5 text-xs font-bold text-fog-300 transition enabled:hover:border-gold-500/60 enabled:hover:text-gold-400 disabled:opacity-30"
+                >
+                  <IcChevronL className="h-3.5 w-3.5" /> Trước
+                </button>
+                <button
+                  onClick={() => nextEp && nav(`/phim/${item.slug}/tap/${nextEp.slug}`)}
+                  disabled={!nextEp}
+                  className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-1.5 text-xs font-extrabold text-ink-950 transition enabled:hover:bg-gold-400 disabled:opacity-30"
+                >
+                  Sau <IcChevronR className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* phông nền */}
       <div className="relative overflow-hidden border-b border-ink-800">
         <img
@@ -212,7 +477,14 @@ export default function DetailPage() {
               </div>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">
-                {watchTo ? (
+                {playing ? (
+                  <button
+                    onClick={closePlayer}
+                    className="inline-flex items-center gap-2.5 rounded-md border border-ink-600 px-6 py-3 text-sm font-extrabold uppercase tracking-wider text-fog-100 transition hover:border-ember-500/60 hover:text-ember-400 active:scale-95"
+                  >
+                    <IcX className="h-4 w-4" /> Ẩn trình phát
+                  </button>
+                ) : watchTo ? (
                   <Link
                     to={watchTo}
                     className="group inline-flex items-center gap-2.5 rounded-md bg-gold-500 px-6 py-3 text-sm font-extrabold uppercase tracking-wider text-ink-950 shadow-[0_0_30px_rgba(245,179,1,0.35)] transition hover:bg-gold-400 active:scale-95"
@@ -277,12 +549,18 @@ export default function DetailPage() {
                     to={`/phim/${item.slug}/tap/${ep.slug}`}
                     title={ep.name}
                     className={`relative flex items-center justify-center gap-1.5 rounded-md border px-2 py-2.5 text-center text-xs font-bold transition active:scale-95 ${
-                      watched
-                        ? "border-gold-500/50 bg-gold-500/10 text-gold-300"
-                        : "border-ink-700 bg-ink-900 text-fog-300 hover:border-gold-500/60 hover:text-gold-400"
-                    }`}
-                  >
-                    {watched && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-500" />}
+                        ep.slug === current?.slug
+                          ? "border-gold-500 bg-gold-500 text-ink-950 shadow-[0_0_16px_rgba(245,179,1,0.4)]"
+                          : watched
+                            ? "border-gold-500/50 bg-gold-500/10 text-gold-300"
+                            : "border-ink-700 bg-ink-900 text-fog-300 hover:border-gold-500/60 hover:text-gold-400"
+                      }`}
+                    >
+                      {ep.slug === current?.slug ? (
+                        <IcPlay className="h-2.5 w-2.5 shrink-0" />
+                      ) : (
+                        watched && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-500" />
+                      )}
                     <span className="truncate">{label}</span>
                   </Link>
                 );

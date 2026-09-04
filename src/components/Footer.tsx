@@ -1,11 +1,14 @@
 "use client";
 
 import { Link } from "react-router-dom";
-import { API_BASE, COUNTRIES, GENRES, LIST_TYPES } from "../lib/api";
+import { API_BASE, LIST_TYPES } from "../lib/api";
+import { useTaxonomies } from "../hooks/useTaxonomies";
 import { FilmStrip } from "./ui";
 import { IcClapper, IcSignal } from "./icons";
 
 export default function Footer() {
+  const { genres, countries } = useTaxonomies();
+
   return (
     <footer className="mt-20 border-t border-ink-800 bg-ink-900/60">
       <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6">
@@ -32,6 +35,11 @@ export default function Footer() {
           <nav aria-label="Danh mục">
             <p className="font-display text-lg tracking-widest text-fog-100">DANH MỤC</p>
             <ul className="mt-3 space-y-2">
+              <li>
+                <Link to="/xem-tiep" className="text-sm font-semibold text-ember-400/90 transition hover:text-ember-300">
+                  Xem tiếp →
+                </Link>
+              </li>
               {LIST_TYPES.map((t) => (
                 <li key={t.slug}>
                   <Link to={`/danh-sach/${t.slug}`} className="text-sm text-fog-500 transition hover:text-gold-400">
@@ -44,8 +52,8 @@ export default function Footer() {
 
           <nav aria-label="Thể loại">
             <p className="font-display text-lg tracking-widest text-fog-100">THỂ LOẠI</p>
-            <ul className="mt-3 space-y-2">
-              {GENRES.slice(0, 7).map((g) => (
+            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+              {genres.map((g) => (
                 <li key={g.slug}>
                   <Link to={`/the-loai/${g.slug}`} className="text-sm text-fog-500 transition hover:text-gold-400">
                     {g.name}
@@ -57,8 +65,8 @@ export default function Footer() {
 
           <nav aria-label="Quốc gia">
             <p className="font-display text-lg tracking-widest text-fog-100">QUỐC GIA</p>
-            <ul className="mt-3 space-y-2">
-              {COUNTRIES.slice(0, 7).map((c) => (
+            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+              {countries.map((c) => (
                 <li key={c.slug}>
                   <Link to={`/quoc-gia/${c.slug}`} className="text-sm text-fog-500 transition hover:text-gold-400">
                     {c.name}
@@ -73,9 +81,6 @@ export default function Footer() {
           <p>
             © {new Date().getFullYear()} Phim Điện Ảnh — dự án phi thương mại, phục vụ mục đích giáo dục. Toàn bộ dữ liệu & hình ảnh thuộc về KKPhim và các nhà
             phát hành.
-          </p>
-          <p className="font-mono text-[11px]">
-            SPA thuần client · hash routing · export tĩnh như <span className="text-gold-500">next export</span>
           </p>
         </div>
       </div>

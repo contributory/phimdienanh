@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { COUNTRIES, GENRES, LIST_TYPES, searchMovies } from "../lib/api";
+import { LIST_TYPES, searchMovies } from "../lib/api";
+import { useTaxonomies } from "../hooks/useTaxonomies";
 import type { Movie } from "../lib/types";
 import { imgUrl } from "../lib/utils";
 import { IcChevronD, IcClapper, IcSearch, IcX } from "./icons";
@@ -49,7 +50,7 @@ function Dropdown({ label, items, prefix }: { label: string; items: readonly { s
         <IcChevronD className={`h-3.5 w-3.5 transition-transform duration-300 ${open ? "rotate-180" : ""}`} />
       </button>
       <div
-        className={`absolute left-1/2 top-full z-50 mt-2 w-52 -translate-x-1/2 origin-top rounded-lg border border-ink-700 bg-ink-900 p-2 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)] transition-all duration-200 ${
+        className={`absolute left-1/2 top-full z-50 mt-2 w-52 -translate-x-1/2 origin-top rounded-lg border border-ink-700 bg-ink-900 p-2 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)] transition-all duration-200 max-h-[65vh] overflow-y-auto ${
           open ? "pointer-events-auto scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
         }`}
       >
@@ -181,6 +182,7 @@ function SearchBox() {
 }
 
 export default function Header() {
+  const { genres, countries } = useTaxonomies();
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -209,11 +211,12 @@ export default function Header() {
 
         <nav className="hidden items-center gap-5 md:flex" aria-label="Điều hướng chính">
           <NavItem to="/" label="Trang chủ" end />
+          <NavItem to="/xem-tiep" label="Xem tiếp" />
           {LIST_TYPES.slice(1).map((t) => (
             <NavItem key={t.slug} to={`/danh-sach/${t.slug}`} label={t.label} />
           ))}
-          <Dropdown label="Thể loại" items={GENRES.slice(0, 10)} prefix="/the-loai/" />
-          <Dropdown label="Quốc gia" items={COUNTRIES.slice(0, 8)} prefix="/quoc-gia/" />
+          <Dropdown label="Thể loại" items={genres} prefix="/the-loai/" />
+          <Dropdown label="Quốc gia" items={countries} prefix="/quoc-gia/" />
         </nav>
 
         <div className="ml-auto hidden sm:block">
@@ -227,10 +230,11 @@ export default function Header() {
           <SearchBox />
         </div>
         <NavItem to="/" label="Trang chủ" end />
+        <NavItem to="/xem-tiep" label="Xem tiếp" />
         {LIST_TYPES.slice(1).map((t) => (
           <NavItem key={t.slug} to={`/danh-sach/${t.slug}`} label={t.label} />
         ))}
-        {GENRES.slice(0, 6).map((g) => (
+        {genres.slice(0, 6).map((g) => (
           <NavLink
             key={g.slug}
             to={`/the-loai/${g.slug}`}

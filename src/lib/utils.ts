@@ -1,10 +1,10 @@
-import { SITE_BASE } from "./api";
+import { CDN_BASE } from "./api";
 
-/** Ảnh từ KKPhim đôi khi là đường dẫn tương đối — chuẩn hoá về absolute. */
+/** Ảnh từ API đôi khi là đường dẫn tương đối — chuẩn hoá về CDN (phimimg.com). */
 export function imgUrl(url?: string): string {
   if (!url) return FALLBACK_POSTER;
   if (/^https?:\/\//i.test(url)) return url;
-  return `${SITE_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+  return `${CDN_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 export const FALLBACK_POSTER =

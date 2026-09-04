@@ -1,6 +1,7 @@
-/* Kiểu dữ liệu khớp với tài liệu API https://kkphim.com/api-document */
+/* Kiểu dữ liệu khớp với tài liệu API mới nhất https://kkphim.com/api-document (base phimapi.com, chuẩn v1) */
 
 export interface TaxonomyRef {
+  _id?: string;
   id?: string;
   name: string;
   slug: string;
@@ -24,6 +25,17 @@ export interface Movie {
   episode_current?: string;
   episode_total?: string | number;
   total_episodes?: number;
+  /* các trường mới của API (chuẩn v1) */
+  time?: string;
+  view?: number;
+  trailer_url?: string;
+  alternative_names?: string[];
+  lang_key?: string;
+  is_published?: boolean;
+  notify?: string;
+  showtimes?: unknown[];
+  last_episodes?: unknown;
+  chieurap?: boolean;
   year?: number;
   actor?: string[];
   director?: string[];
@@ -33,6 +45,8 @@ export interface Movie {
   imdb?: { id?: string };
   modified?: { time?: string; time_human?: string };
   created?: { time?: string; time_human?: string };
+  /* bản v1: episodes nằm trong item */
+  episodes?: ServerGroup[];
 }
 
 export interface EpisodeData {
@@ -57,21 +71,24 @@ export interface Pagination {
 }
 
 export interface ListPayload {
-  status: boolean;
+  status: boolean | string;
   message?: string;
+  /** chuẩn hoá từ data.params.pagination của bản v1 */
   pagination?: Pagination;
   data?: {
     seoOnPage?: unknown;
     breadCrumb?: unknown[];
     titlePage?: string;
     items?: Movie[];
-    params?: Record<string, unknown>;
+    params?: { pagination?: Pagination } & Record<string, unknown>;
     type_list?: unknown;
+    APP_DOMAIN_CDN_IMAGE?: string;
+    APP_DOMAIN_FRONTEND?: string;
   };
 }
 
 export interface DetailPayload {
-  status: boolean;
+  status: boolean | string;
   message?: string;
   data?: {
     seoOnPage?: unknown;

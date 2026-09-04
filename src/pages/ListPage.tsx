@@ -12,9 +12,7 @@ import {
   Reveal,
 } from "../components/ui";
 import {
-  GENRES,
   LIST_TYPES,
-  YEARS,
   getCountryList,
   getGenreList,
   getList,
@@ -22,6 +20,7 @@ import {
   searchMovies,
 } from "../lib/api";
 import { useFetch } from "../hooks/useFetch";
+import { useTaxonomies } from "../hooks/useTaxonomies";
 import { setDocTitle } from "../lib/utils";
 
 type Kind = "danh-sach" | "the-loai" | "quoc-gia" | "nam" | "tim-kiem";
@@ -77,7 +76,8 @@ export default function ListPage({ kind }: { kind: Kind }) {
     setParams(next);
   };
 
-  const genreName = GENRES.find((g) => g.slug === slug)?.name;
+  const { genres, years } = useTaxonomies();
+  const genreName = genres.find((g) => g.slug === slug)?.name;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
@@ -131,7 +131,7 @@ export default function ListPage({ kind }: { kind: Kind }) {
       {(kind === "the-loai" || kind === "quoc-gia") && (
         <div className="mb-7 flex flex-wrap items-center gap-2 rounded-lg border border-ink-800 bg-ink-900/50 px-4 py-3">
           <span className="mr-1 text-xs font-extrabold uppercase tracking-widest text-fog-500">Năm:</span>
-          {YEARS.map((y) => (
+          {years.slice(0, 12).map((y) => (
             <Link
               key={y}
               to={`/nam/${y}`}
