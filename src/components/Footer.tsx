@@ -17,7 +17,7 @@ export default function Footer() {
                 <IcClapper className="h-5 w-5" />
               </span>
               <span className="font-display text-2xl tracking-[0.06em] text-fog-100">
-                RẠP<span className="text-gold-400">·KK</span>
+                PHIM <span className="text-gold-400">ĐIỆN ẢNH</span>
               </span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-fog-500">
@@ -80,7 +80,7 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-ink-800 pt-6 text-xs text-fog-500 sm:flex-row sm:items-center">
           <p>
-            © {new Date().getFullYear()} Rạp KK — dự án học tập. Toàn bộ dữ liệu & hình ảnh thuộc về KKPhim và các nhà
+            © {new Date().getFullYear()} Phim Điện Ảnh — dự án học tập. Toàn bộ dữ liệu & hình ảnh thuộc về KKPhim và các nhà
             phát hành.
           </p>
           <p className="font-mono text-[11px]">

@@ -198,12 +198,12 @@ export default function Header() {
       }`}
     >
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-6 px-4 sm:px-6">
-        <Link to="/" className="group flex shrink-0 items-center gap-2.5" aria-label="Trang chủ Rạp KK">
+        <Link to="/" className="group flex shrink-0 items-center gap-2.5" aria-label="Trang chủ Phim Điện Ảnh">
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-gold-500 text-ink-950 shadow-[0_0_24px_rgba(245,179,1,0.4)] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105">
             <IcClapper className="h-5 w-5" />
           </span>
-          <span className="font-display text-[26px] leading-none tracking-[0.06em] text-fog-100">
-            RẠP<span className="text-gold-400">·KK</span>
+          <span className="font-display text-xl leading-none tracking-[0.06em] text-fog-100 transition-colors group-hover:text-gold-300 sm:text-[26px]">
+            PHIM <span className="text-gold-400">ĐIỆN ẢNH</span>
           </span>
         </Link>
 

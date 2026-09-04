@@ -39,7 +39,9 @@ export function timeAgo(iso?: string): string {
 }
 
 export function setDocTitle(title: string) {
-  document.title = title ? `${title} • Rạp KK` : "Rạp KK — Xem phim online · API KKPhim";
+  document.title = title
+    ? `${title} • Phim Điện Ảnh`
+    : "Phim Điện Ảnh — Xem phim online · API KKPhim";
 }
 
 /** Rút gọn số tập / nhãn trạng thái */
