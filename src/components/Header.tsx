@@ -77,7 +77,14 @@ function SearchBox() {
   const loc = useLocation();
   const boxRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setQ(""), [loc]);
+  /* giữ từ khoá trong ô tìm kiếm (không xoá khi điều hướng);
+     chỉ tự điền từ URL khi đang ở trang kết quả tìm kiếm và ô đang trống (ví dụ sau khi F5) */
+  useEffect(() => {
+    if (loc.pathname === "/tim-kiem") {
+      const kw = new URLSearchParams(loc.search).get("keyword") ?? "";
+      setQ((prev) => prev || kw);
+    }
+  }, [loc]);
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setFocus(false);
@@ -145,10 +152,7 @@ function SearchBox() {
               <Link
                 key={m.slug}
                 to={`/phim/${m.slug}`}
-                onClick={() => {
-                  setFocus(false);
-                  setQ("");
-                }}
+                onClick={() => setFocus(false)}
                 className="flex items-center gap-3 px-3 py-2 transition hover:bg-ink-800"
               >
                 <img
