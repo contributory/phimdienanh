@@ -21,16 +21,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-fog-500">
-              Rạp phim mini chạy hoàn toàn trên trình duyệt, bọc lại bộ API công khai của{" "}
-              <a
-                href="https://kkphim.com/api-document"
-                target="_blank"
-                rel="noreferrer"
-                className="font-semibold text-gold-400 underline decoration-gold-500/40 underline-offset-4 hover:text-gold-300"
-              >
-                kkphim.com/api-document
-              </a>
-              . Không backend, không đăng nhập — mở lên là xem.
+              Dự án phim điện ảnh phi thương mại, phục vụ mục đích giáo dục.
             </p>
             <p className="mt-4 inline-flex items-center gap-2 rounded-md border border-ink-700 bg-ink-950/60 px-3 py-2 text-xs font-semibold text-fog-300">
               <IcSignal className="h-4 w-4 text-gold-400" />
