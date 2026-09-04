@@ -6,7 +6,7 @@ import Hero, { Ticker } from "../components/Hero";
 import MovieRow from "../components/MovieRow";
 import { IcHistory, IcPlay, IcTrash } from "../components/icons";
 import { FilmStrip, Reveal, SectionHead } from "../components/ui";
-import { getList } from "../lib/api";
+import { getNewMovies, getList } from "../lib/api";
 import { useFetch } from "../hooks/useFetch";
 import { useHistory } from "../hooks/useHistory";
 import type { HistoryEntry } from "../lib/types";
@@ -45,7 +45,7 @@ function HistoryCard({ e }: { e: HistoryEntry }) {
 export default function HomePage() {
   const { entries, clear } = useHistory();
 
-  const latest = useFetch("list:phim-moi-cap-nhat:1", () => getList("phim-moi-cap-nhat", 1));
+  const latest = useFetch("list:phim-moi:1", () => getNewMovies(1));
   const single = useFetch("list:phim-le:1", () => getList("phim-le", 1));
   const series = useFetch("list:phim-bo:1", () => getList("phim-bo", 1));
   const cartoon = useFetch("list:hoat-hinh:1", () => getList("hoat-hinh", 1));
