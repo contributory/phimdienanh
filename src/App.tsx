@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { HashRouter, Link, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
 import { IcClapper } from "./components/icons";
@@ -43,7 +43,7 @@ function NotFound() {
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <HistoryProvider>
         <ScrollToTop />
         <div className="flex min-h-screen flex-col">
@@ -64,6 +64,6 @@ export default function App() {
           <Footer />
         </div>
       </HistoryProvider>
-    </HashRouter>
+    </BrowserRouter>
   );
 }

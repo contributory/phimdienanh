@@ -42,11 +42,17 @@ async function request<T>(path: string): Promise<T> {
 }
 
 /* ── Danh sách ─────────────────────────────────────────────────────────── */
+export const getNewMovies = (page = 1) =>
+  request<ListPayload>(`/phim-moi?page=${page}`);
+
 export const getList = (typeSlug: string, page = 1) =>
   request<ListPayload>(`/danh-sach/${typeSlug}?page=${page}`);
 
 export const getGenreList = (slug: string, page = 1) =>
   request<ListPayload>(`/the-loai/${slug}?page=${page}`);
+
+export const getGenres = () =>
+  request<{ status: boolean; message?: string; data?: { items: { id?: string; name: string; slug: string }[] } }>("/the-loai");
 
 export const getCountryList = (slug: string, page = 1) =>
   request<ListPayload>(`/quoc-gia/${slug}?page=${page}`);
