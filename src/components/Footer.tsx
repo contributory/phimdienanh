@@ -80,7 +80,7 @@ export default function Footer() {
 
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-ink-800 pt-6 text-xs text-fog-500 sm:flex-row sm:items-center">
           <p>
-            © {new Date().getFullYear()} Phim Điện Ảnh — dự án học tập. Toàn bộ dữ liệu & hình ảnh thuộc về KKPhim và các nhà
+            © {new Date().getFullYear()} Phim Điện Ảnh — dự án phi thương mại, phục vụ mục đích giáo dục. Toàn bộ dữ liệu & hình ảnh thuộc về KKPhim và các nhà
             phát hành.
           </p>
           <p className="font-mono text-[11px]">
